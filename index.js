@@ -1,46 +1,59 @@
 const express = require("express")
+const morgan = require("morgan") //exercise 3.7
 const app = express()
 app.use(express.json())
 
+//exercise 3.8 -> How to custom log?
+//1. Define and add custom token to extract request body persons (see documentation - Tokens -> Creating new tokens)
+morgan.token('person', (req, res) => {
+    //if POST req, return w/ person info inside req.body, else return nothing
+    if (req.method === 'POST') return JSON.stringify(req.body)
+})
+//2. Define custom logging format (see documentation - Using format string of predefined tokens)
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :person'))
+
+
+
 let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
+    {
+        "id": "1",
+        "name": "Arto Hellas",
+        "number": "040-123456"
     },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
+    {
+        "id": "2",
+        "name": "Ada Lovelace",
+        "number": "39-44-5323523"
     },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
+    {
+        "id": "3",
+        "name": "Dan Abramov",
+        "number": "12-43-234345"
     },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
+    {
+        "id": "4",
+        "name": "Mary Poppendieck",
+        "number": "39-23-6423122"
     }
 ]
 
+
 const generateId = () => { //exercise 3.5
     return Math.floor(Math.random() * 999999999999)
-} 
+}
 
-app.post('/api/persons', (request,response) => { //exercise 3.5-6 - add new person entries
+app.post('/api/persons', (request, response) => { //exercise 3.5-6 - add new person entries
     const name = request.body.name
     const number = request.body.number
     if (name && number) {
-        if (persons.find(p => p.name === name)){ //if name is NOT unique
+        if (persons.find(p => p.name === name)) { //if name is NOT unique
             response.status(400).json({
                 error: "Name already exists in the phonebook"
             });
         }
-        else{
+        else { //create entry
             const id = generateId()
-            const newEntry = {"id": id, "name": name, "number": number}
+            const newEntry = { "id": id, "name": name, "number": number }
             persons = persons.concat(newEntry)
             response.json(persons);
         }
@@ -50,32 +63,32 @@ app.post('/api/persons', (request,response) => { //exercise 3.5-6 - add new pers
             error: "The name or number is missing"
         });
     }
-    
+
 })
 
-app.delete('/api/persons/:id', (request,response) => { //exercise 3.4 - delete person with a specific id
+app.delete('/api/persons/:id', (request, response) => { //exercise 3.4 - delete person with a specific id
     const id = request.params.id
     persons = persons.filter(p => p.id !== id)
     response.status(204).end() // 204 status code = successful operation with no returned content
 })
 
-app.get('/api/persons/:id', (request,response) => { //exercise 3.3 - return person with a specific id
+app.get('/api/persons/:id', (request, response) => { //exercise 3.3 - return person with a specific id
     const id = request.params.id
     let person = persons.find(p => p.id === id)
-    if (person){
+    if (person) {
         response.json(person)
     }
-    else{
+    else {
         response.status(404).end() // 404 status code = resource not found
     }
 })
 
-app.get('/info', (request,response) => { //exercise 3.2 - return info & received time
+app.get('/info', (request, response) => { //exercise 3.2 - return info & received time
     let res = `Phonebook has info for ${persons.length} person(s). <br>${new Date()}`
     response.send(res);
 })
 
-app.get('/api/persons', (request,response) => { //exercise 3.1 - return all persons
+app.get('/api/persons', (request, response) => { //exercise 3.1 - return all persons
     response.json(persons)
 })
 
