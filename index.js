@@ -1,6 +1,7 @@
 const express = require('express');
 const morgan = require('morgan');
 const app = express();
+app.use(express.static('dist'))
 app.use(express.json())
 morgan.token('body', (request) => {
     return JSON.stringify(request.body)
@@ -8,7 +9,7 @@ morgan.token('body', (request) => {
 app.use(morgan(':method :url :status - :response-time ms :body', {
     skip: (request, response) => { return request.method !== 'POST' }
 }))
-const baseUrl = 'http://localhost:3001/'
+const baseUrl = '/api/persons'
 let persons = [
     {
         "id": "1",
