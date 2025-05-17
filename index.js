@@ -1,19 +1,14 @@
-const express = require("express")
-const morgan = require("morgan") //exercise 3.7
-const app = express()
+const express = require('express');
+const morgan = require('morgan');
+const app = express();
 app.use(express.json())
-
-//exercise 3.8 -> How to custom log?
-//1. Define and add custom token to extract request body persons (see documentation - Tokens -> Creating new tokens)
-morgan.token('person', (req, res) => {
-    //if POST req, return w/ person info inside req.body, else return nothing
-    if (req.method === 'POST') return JSON.stringify(req.body)
+morgan.token('body', (request) => {
+    return JSON.stringify(request.body)
 })
-//2. Define custom logging format (see documentation - Using format string of predefined tokens)
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :person'))
-
-
-
+app.use(morgan(':method :url :status - :response-time ms :body', {
+    skip: (request, response) => { return request.method !== 'POST' }
+}))
+const baseUrl = 'http://localhost:3001/'
 let persons = [
     {
         "id": "1",
@@ -37,67 +32,80 @@ let persons = [
     }
 ]
 
+app.get('/', (request, response) => {
+    response.end();
+})
 
-const generateId = () => { //exercise 3.5
-    return Math.floor(Math.random() * 999999999999)
+//ex.3.1 get all persons
+app.get('/api/persons', (request, response) => {
+    response.json(persons);
+})
+
+//ex.3.2 info page
+app.get('/info', (request, response) => {
+    const personsCnt = persons.length;
+    const currentTime = new Date();
+    const message = `<p>Phonebook has ${personsCnt} person(s)</p>
+    <p>Current time: ${currentTime}</p>`
+    response.send(message);
+})
+
+//ex.3.3 display one person
+app.get('/api/persons/:id', (request, response) => {
+    const id = request.params.id;
+    const person = persons.find(person => person.id === id);
+    if (person) { response.json(person); }
+    else {
+        response.status(404).send({ error: 'id not found' });
+    }
+})
+
+//ex.3.4 delete one person
+app.delete('/api/persons/:id', (request, response) => {
+    const id = request.params.id;
+    if (persons.some(person => person.id === id)) {
+        persons = persons.filter(person => person.id === id);
+        response.status(204).end()
+    }
+    else {
+        response.status(404).send({ error: 'id not found' });
+    }
+})
+
+//ex.3.5 generate id
+const generateID = () => {
+    return Math.floor(Math.random() * 10000000);
 }
 
-app.post('/api/persons', (request, response) => { //exercise 3.5-6 - add new person entries
-    const name = request.body.name
-    const number = request.body.number
-    if (name && number) {
-        if (persons.find(p => p.name === name)) { //if name is NOT unique
-            response.status(400).json({
-                error: "Name already exists in the phonebook"
-            });
-        }
-        else { //create entry
-            const id = generateId()
-            const newEntry = { "id": id, "name": name, "number": number }
-            persons = persons.concat(newEntry)
-            response.json(persons);
-        }
+//ex.3.8 logging POST requests with morgan
+// app.use(morgan(':method :url :status - :response-time ms :body'))
+
+//ex.3.5 add new person
+app.post('/api/persons', (request, response) => {
+    const { name, number } = request.body;
+    console.log(JSON.stringify(request.body))
+    if (!number || !name) {
+        response.status(404).send({ error: "Name and number cannot be empty!" });
+    }
+    else if (persons.some(person => person.name === name)) {
+        response.status(404).send({ error: "Name already exists!" });
     }
     else {
-        response.status(400).json({
-            error: "The name or number is missing"
-        });
-    }
-
-})
-
-app.delete('/api/persons/:id', (request, response) => { //exercise 3.4 - delete person with a specific id
-    const id = request.params.id
-    persons = persons.filter(p => p.id !== id)
-    response.status(204).end() // 204 status code = successful operation with no returned content
-})
-
-app.get('/api/persons/:id', (request, response) => { //exercise 3.3 - return person with a specific id
-    const id = request.params.id
-    let person = persons.find(p => p.id === id)
-    if (person) {
-        response.json(person)
-    }
-    else {
-        response.status(404).end() // 404 status code = resource not found
+        const newPerson = {
+            "id": String(generateID()),
+            name,
+            number
+        }
+        persons = persons.concat(newPerson);
+        response.status(200).end();
     }
 })
 
-app.get('/info', (request, response) => { //exercise 3.2 - return info & received time
-    let res = `Phonebook has info for ${persons.length} person(s). <br>${new Date()}`
-    response.send(res);
-})
+//ex.3.6 error handling
+// name or number missing
+// name already exists
 
-app.get('/api/persons', (request, response) => { //exercise 3.1 - return all persons
-    response.json(persons)
-})
-
-// initialisation (Must be included!)
-app.get('/', (request, response) => { //root path
-    response.send('<h1>Hello world!</h1>')
-})
-
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
+    console.log(`Server running on port ${PORT}`);
 })
